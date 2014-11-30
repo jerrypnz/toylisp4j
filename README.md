@@ -29,6 +29,18 @@ Run the main class to get a REPL and you are free to play with it:
 java -cp build/libs/toylisp-0.1.0-SNAPSHOT.jar org.toylisp.Main
 ```
 
+Example REPL session:
+
+```
+toylisp> (def map (lambda (f x) (cond x (cons (f (car x)) (map f (cdr x))) t nil)))
+org.toylisp.Func@7451b0af
+toylisp> (def double (lambda (n) (* n 2)))
+org.toylisp.Func@33a17727
+toylisp> (map double '(0 1 2 3 4 5 6))
+(0 2 4 6 8 10 12)
+toylisp>
+```
+
 ## Data Types
 
 Currently only three:
