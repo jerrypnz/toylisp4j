@@ -25,7 +25,7 @@ If everything goes well, you we find a jar under `build/libs` named `toylist-VER
 
 Run the main class to get a REPL and you are free to play with it:
 
-```
+```lisp
 java -cp build/libs/toylisp-0.1.0-SNAPSHOT.jar org.toylisp.Main
 ```
 
@@ -67,7 +67,7 @@ Here is a list of features I'm planning to implement:
 
 - macros
 - core library written in toylisp itself, including but not limited to the following operations:
-    -`let`, `if`, `when`, `when-let`, `if-let`, `->`, `->>` (implemented with macros)
+    - `let`, `if`, `when`, `when-let`, `if-let`, `->`, `->>` (implemented with macros)
     - `map`, `mapc`, `mapcat`, `cat` and other list manipulation functions
 - a metacircular interpreter implemented with toylisp itself
 
