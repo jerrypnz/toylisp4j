@@ -25,13 +25,13 @@ If everything goes well, you we find a jar under `build/libs` named `toylist-VER
 
 Run the main class to get a REPL and you are free to play with it:
 
-```lisp
+```
 java -cp build/libs/toylisp-0.1.0-SNAPSHOT.jar org.toylisp.Main
 ```
 
 Example REPL session:
 
-```
+```lisp
 toylisp> (def map (lambda (f x) (cond x (cons (f (car x)) (map f (cdr x))) t nil)))
 org.toylisp.Func@7451b0af
 toylisp> (def double (lambda (n) (* n 2)))
@@ -58,7 +58,7 @@ Currently only the following operators are supported:
     - `do` Execute forms in sequence and return the value of the last expression
     - `cond` Conditional expression. Note that only one level of parentheses is needed, like in Clojure.
     - `quote`
-- Functions: `cons`, `car`, `cdr`, `+`, `-`, `\*`, `/`, `eq?`
+- Functions: `cons`, `car`, `cdr`, `+`, `-`, `*`, `/`, `eq?`
 
 
 ## TODO
