@@ -19,7 +19,7 @@ If you are running Windows, use the following command instead:
 gradlew.bat build
 ```
 
-If everything goes well, you we find a jar under `build/libs` named `toylist-VERSION.jar`.
+If everything goes well, you will find a jar under `build/libs` named `toylist-0.1.0-SNAPSHOT.jar`.
 
 ## Usage
 
