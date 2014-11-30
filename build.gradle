@@ -1,0 +1,7 @@
+apply plugin: 'java'
+
+group = 'org.toylisp'
+
+dependencies {
+    testCompile 'junit:junit:4.11'
+}
