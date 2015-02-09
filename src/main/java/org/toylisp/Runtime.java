@@ -2,6 +2,7 @@ package org.toylisp;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -33,8 +34,9 @@ public class Runtime {
                   .set(Symbol.intern("cons"), cons)
                   .set(Symbol.intern("car"), car)
                   .set(Symbol.intern("cdr"), cdr)
+                  .set(Symbol.intern("list"), list)
                   .set(Symbol.intern("eq?"), eq)
-                  .set(Symbol.intern("prn"), prn) //Implement this using Lisp once Java interop is implemented.
+                  .set(Symbol.intern("prn"), prn)
                   .set(Symbol.intern("+"), plus)
                   .set(Symbol.intern("-"), minus)
                   .set(Symbol.intern("*"), multiply)
@@ -107,6 +109,16 @@ public class Runtime {
         public Object invoke(Object... args) {
             ensureArity("cdr", 1, args.length);
             return ((Cons) args[0]).cdr();
+        }
+    };
+
+    static final IFunc list = new IFunc() {
+        @Override
+        public Object invoke(Object... args) {
+            if (args.length == 0) {
+                return null;
+            }
+            return Cons.fromList(Arrays.asList(args));
         }
     };
 

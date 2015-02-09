@@ -25,9 +25,15 @@ public class Main {
             if (line == null) {
                 return;
             }
-            List<Object> forms = Reader.read(line);
-            for (Object form : forms) {
+            List<Object> forms = null;
+            try {
+                forms = Reader.read(line);
+            } catch (Exception e) {
+                e.printStackTrace();
+                continue;
+            }
 
+            for (Object form : forms) {
                 Object ret = null;
                 try {
                     ret = Runtime.eval(form, rootEnv);
@@ -62,11 +68,15 @@ public class Main {
     }
 
     public static void main(String[] args) throws IOException {
-        String fileName = args[0];
-        if (fileName == null || fileName.isEmpty()) {
+        if (args.length == 0) {
             runREPL();
         } else {
-            runFile(fileName, Charset.defaultCharset().name());
+            String fileName = args[0];
+            if (fileName == null || fileName.isEmpty()) {
+                runREPL();
+            } else {
+                runFile(fileName, Charset.defaultCharset().name());
+            }
         }
     }
 
