@@ -12,7 +12,7 @@ public class ReaderTests {
 
     @Test
     public void testTokenize() throws Exception {
-        //Basic
+        // Basic
         assertEquals(asList("a"), tokenize("a"));
         assertEquals(asList("a", "b"), tokenize("a b"));
         assertEquals(asList("(", "a", ")"), tokenize("(a)"));
@@ -24,6 +24,13 @@ public class ReaderTests {
 
         // Quotes
         assertEquals(asList("'", "(", "a", "b", "c", ")"), tokenize("'(a b c)"));
+
+        // Comments
+        assertEquals(asList("(", "a", ")"), tokenize(";comment\r(a)"));
+        assertEquals(asList("(", "a", ")"), tokenize(";comment\n(a)"));
+        assertEquals(asList("(", "a", ")"), tokenize(";comment\r\n(a)"));
+
+        assertEquals(asList("(", "a", "b", ")"), tokenize(";comment1\n;comment2\n(a b)"));
     }
 
     @Test

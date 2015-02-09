@@ -115,7 +115,7 @@ public class RuntimeTests {
     public void testCond() {
         Symbol lambda = Symbol.intern("lambda");
         Symbol cond = Symbol.intern("cond");
-        Symbol eq = Symbol.intern("eq");
+        Symbol eq = Symbol.intern("eq?");
         Symbol quote = Symbol.intern("quote");
         Symbol x = Symbol.intern("x");
         Symbol t = Symbol.intern("t");

@@ -34,6 +34,7 @@ public class Runtime {
                   .set(Symbol.intern("car"), car)
                   .set(Symbol.intern("cdr"), cdr)
                   .set(Symbol.intern("eq?"), eq)
+                  .set(Symbol.intern("prn"), prn) //Implement this using Lisp once Java interop is implemented.
                   .set(Symbol.intern("+"), plus)
                   .set(Symbol.intern("-"), minus)
                   .set(Symbol.intern("*"), multiply)
@@ -116,6 +117,18 @@ public class Runtime {
             return (args[0] instanceof Symbol) &&
                    (args[1] instanceof Symbol) &&
                    (args[0] == args[1]);
+        }
+    };
+
+    static final IFunc prn = new IFunc() {
+        @Override
+        public Object invoke(Object... args) {
+            StringBuilder msg = new StringBuilder(64);
+            for (Object arg : args) {
+                msg.append(arg);
+            }
+            System.out.println(msg.toString());
+            return null;
         }
     };
 

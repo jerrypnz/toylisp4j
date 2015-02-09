@@ -24,6 +24,7 @@ public class Reader {
         List<String> tokens = new ArrayList<>(256);
 
         boolean isInStr = false;
+        boolean isInComment = false;
         char c = 0;
         char c0;
         for (int i = 0; i < input.length(); i++) {
@@ -35,11 +36,19 @@ public class Reader {
                     finishToken(currentToken, tokens);
                     isInStr = false;
                 }
+            } else if (isInComment) {
+                if (c == '\r' || c == '\n') {
+                    isInComment = false;
+                }
             } else {
                 switch (c) {
                     case '"':
                         currentToken.append(c);
                         isInStr = true;
+                        break;
+
+                    case ';':
+                        isInComment = true;
                         break;
 
                     case '\'':
