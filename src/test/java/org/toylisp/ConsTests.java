@@ -30,4 +30,12 @@ public class ConsTests {
         System.out.println(test);
     }
 
+    @Test
+    public void testConcat() {
+        Cons expected = cons("a", cons("b", cons("c", cons("d", null))));
+        assertEquals(expected, Cons.concat(cons("a", cons("b", null)),
+                                           cons("c", cons("d", null))));
+        assertEquals(expected, Cons.concat("a", cons("b", cons("c", null)), "d"));
+    }
+
 }

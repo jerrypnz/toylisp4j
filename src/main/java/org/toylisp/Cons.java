@@ -19,13 +19,36 @@ public class Cons {
     }
 
     public static Cons fromList(List<Object> list) {
-        Object head = list.get(0);
-        List<Object> tail = list.subList(1, list.size());
-        if (tail.isEmpty()) {
-            return new Cons(head, null);
-        } else {
-            return new Cons(head, fromList(tail));
+        Cons tail = null;
+        for (int i = list.size() - 1; i >= 0; i--) {
+            tail = new Cons(list.get(i), tail);
         }
+        return tail;
+    }
+
+    public static Cons concat(Object... args) {
+        Cons tail = null;
+        for (int i = args.length - 1; i >= 0; i--) {
+            Object obj = args[i];
+            if (obj instanceof Cons) {
+                tail = concat((Cons) obj, tail);
+            } else {
+                tail = new Cons(obj, tail);
+            }
+        }
+        return tail;
+    }
+
+    public static Cons concat(Cons head, Cons tail) {
+        LinkedList<Object> objs = new LinkedList<>();
+        while (head != null) {
+            objs.push(head.car);
+            head = ((Cons) head.cdr);
+        }
+        while (!objs.isEmpty()) {
+            tail = new Cons(objs.pop(), tail);
+        }
+        return tail;
     }
 
     public List<Object> toList() {

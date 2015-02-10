@@ -35,6 +35,7 @@ public class Runtime {
                   .set(Symbol.intern("car"), car)
                   .set(Symbol.intern("cdr"), cdr)
                   .set(Symbol.intern("list"), list)
+                  .set(Symbol.intern("concat"), concat)
                   .set(Symbol.intern("eq?"), eq)
                   .set(Symbol.intern("prn"), prn)
                   .set(Symbol.intern("+"), plus)
@@ -119,6 +120,13 @@ public class Runtime {
                 return null;
             }
             return Cons.fromList(Arrays.asList(args));
+        }
+    };
+
+    static final IFunc concat = new IFunc() {
+        @Override
+        public Object invoke(Object... args) {
+            return Cons.concat(args);
         }
     };
 
