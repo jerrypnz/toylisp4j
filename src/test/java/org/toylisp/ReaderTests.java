@@ -29,15 +29,21 @@ public class ReaderTests {
         assertEquals(asList("(", "a", ")"), tokenize(";comment\r(a)"));
         assertEquals(asList("(", "a", ")"), tokenize(";comment\n(a)"));
         assertEquals(asList("(", "a", ")"), tokenize(";comment\r\n(a)"));
-
         assertEquals(asList("(", "a", "b", ")"), tokenize(";comment1\n;comment2\n(a b)"));
+
+        // Backquote
+        assertEquals(asList("`", "(", "a", "b", "c", ")"), tokenize("`(a b c)"));
+        assertEquals(asList("`", "(", "a", ",", "b", "c", ")"), tokenize("`(a ,b c)"));
+        assertEquals(asList("`", "(", "a", ",@", "b", "c", ")"), tokenize("`(a ,@b c)"));
+        assertEquals(asList("`", "(", "a", ",@", "(", "b", "1", "2", ")", "c", ")"), tokenize("`(a ,@(b 1 2) c)"));
     }
 
     @Test
     public void testTokenToObject() throws Exception {
-        assertEquals(new BigDecimal("14"), Reader.tokenToObject("14"));
-        assertEquals("14", Reader.tokenToObject("\"14\""));
-        assertEquals(Symbol.intern("foo"), Reader.tokenToObject("foo"));
+        assertEquals(new BigDecimal("14"), Reader.read("14", null, false));
+        assertEquals("14", Reader.read("\"14\"", null, false));
+        assertEquals(Symbol.intern("foo"), Reader.read("foo", null, false));
+        assertEquals("foo\r\ncol1\tcol2\t hello", Reader.read("\"foo\\r\\ncol1\\tcol2\\t hello\"", null, false));
     }
 
     @Test
@@ -99,8 +105,16 @@ public class ReaderTests {
         assertEquals(_(a, b, null), Reader.read("(a b nil)").get(0));
     }
 
+    static final Symbol quote = Symbol.intern("quote");
+    static final Symbol concat = Symbol.intern("concat");
+    static final Symbol list = Symbol.intern("list");
+
     @Test
-    public void testStrings() throws Exception {
-        assertEquals("foo\r\ncol1\tcol2\t hello", Reader.tokenToObject("\"foo\\r\\ncol1\\tcol2\\t hello\""));
+    public void testBackquote() throws Exception {
+        Symbol a = Symbol.intern("a");
+        Symbol b = Symbol.intern("b");
+        Symbol c = Symbol.intern("c");
+        assertEquals(_(concat, _(quote, a), _(list, b), c), Reader.read("`(a ,b ,@c)").get(0));
     }
+
 }

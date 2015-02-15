@@ -2,8 +2,11 @@ package org.toylisp;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Lisp Reader <br/>
@@ -11,6 +14,10 @@ import java.util.List;
  * @author jerry created 14/11/29
  */
 public class Reader {
+
+    static final Symbol QUOTE = Symbol.intern("quote");
+    static final Symbol CONCAT = Symbol.intern("concat");
+    static final Symbol LIST = Symbol.intern("list");
 
     private static void finishToken(StringBuilder token, List<String> tokens) {
         if (token.length() > 0) {
@@ -43,6 +50,7 @@ public class Reader {
             } else {
                 switch (c) {
                     case '"':
+                        finishToken(currentToken, tokens);
                         currentToken.append(c);
                         isInStr = true;
                         break;
@@ -51,7 +59,19 @@ public class Reader {
                         isInComment = true;
                         break;
 
+                    case ',':
+                        finishToken(currentToken, tokens);
+                        currentToken.append(c);
+                        // Look ahead to see if it is ",@".
+                        if (i < input.length() - 1 && input.charAt(i + 1) == '@') {
+                            currentToken.append('@');
+                            i++;
+                        }
+                        finishToken(currentToken, tokens);
+                        break;
+
                     case '\'':
+                    case '`':
                     case '(':
                     case ')':
                         finishToken(currentToken, tokens);
@@ -83,107 +103,156 @@ public class Reader {
 
     public static List<Object> read(List<String> tokens) {
         List<Object> results = new ArrayList<>();
-        LinkedList<List<Object>> levels = new LinkedList<>();
-
-        for (String token : tokens) {
-            Object obj = null;
-            // It is possible we read a nil/null,
-            // so we have to use another flag to indicate
-            // whether we read something or not
-            boolean readValidObj = false;
-            switch (token) {
-                case "(":
-                    levels.push(new ArrayList<>(10));
-                    break;
-                case "'":
-                    List<Object> level = new ArrayList<>(10);
-                    level.add(Runtime.QUOTE);
-                    levels.push(level);
-                    break;
-                case ")":
-                    if (levels.size() == 0) {
-                        throw new IllegalArgumentException("Unmatched parentheses");
-                    }
-                    obj = Cons.fromList(levels.pop());
-                    readValidObj = true;
-                    break;
-                default:
-                    obj = tokenToObject(token);
-                    readValidObj = true;
-                    break;
-            }
-
-            while (levels.size() != 0 && readValidObj) {
-                List<Object> level = levels.peek();
-                level.add(obj);
-                if (level.get(0) == Runtime.QUOTE) {
-                    obj = Cons.fromList(level);
-                    levels.pop();
-                } else {
-                    obj = null;
-                    readValidObj = false;
-                }
-            }
-
-            if (readValidObj) {
-                results.add(obj);
-            }
+        Iterator<String> tokenIter = tokens.iterator();
+        while (tokenIter.hasNext()) {
+            String currentToken = tokenIter.next();
+            results.add(read(currentToken, tokenIter, false));
         }
-
-        if (!levels.isEmpty()) {
-            throw new IllegalArgumentException("Unmatched parentheses");
-        }
-
         return results;
     }
 
-    protected static Object tokenToObject(String token) {
-        char firstChar = token.charAt(0);
-        if (Character.isDigit(firstChar)) {
-            return new BigDecimal(token);
-        } else if (firstChar == '"') {
-            return handleString(token);
-        } else if (token.equals("nil") || token.equals("null")) {
-            return null;
+    static Object read(String currentToken, Iterator<String> tokenIterator, boolean isInBackQuote) {
+        if (currentToken.equals(")")) {
+            throw new IllegalArgumentException("Unmatched parentheses: unexpected )");
+        }
+        Character firstChar = currentToken.charAt(0);
+        ObjectReader reader = readers.get(firstChar);
+        if (reader != null) {
+            return reader.readObj(currentToken, tokenIterator, isInBackQuote);
+        } else if (Character.isDigit(firstChar)) {
+            return ObjectReader.NUMBER_READER.readObj(currentToken, tokenIterator, isInBackQuote);
         } else {
-            return Symbol.intern(token);
+            return ObjectReader.SYMBOL_READER.readObj(currentToken, tokenIterator, isInBackQuote);
         }
     }
 
-    protected static String handleString(String token) {
-        StringBuilder val = new StringBuilder();
-        boolean escaping = false;
-        // Ignore quotes
-        for (int i = 1; i < token.length() - 1; i++) {
-            char c = token.charAt(i);
-            if (escaping) {
-                switch (c) {
-                    case 'n':
-                        val.append('\n');
-                        break;
+    private static final Map<Character, ObjectReader> readers;
 
-                    case 'r':
-                        val.append('\r');
-                        break;
+    static {
+        Map<Character, ObjectReader> readersMap = new HashMap<>();
+        readersMap.put('"', ObjectReader.STRING_READER);
+        readersMap.put('(', ObjectReader.SEXP_READER);
+        readersMap.put('\'', ObjectReader.QUOTE_READER);
+        readersMap.put('`', ObjectReader.BACKQUOTE_READER);
+        readersMap.put(',', ObjectReader.UNQUOTE_READER);
+        readers = Collections.unmodifiableMap(readersMap);
+    }
 
-                    case 't':
-                        val.append('\t');
-                        break;
+    static enum ObjectReader {
 
-                    default:
-                        val.append(c);
+        STRING_READER {
+            @Override
+            Object readObj(String currentToken, Iterator<String> tokenIterator, boolean inBackQuote) {
+                StringBuilder val = new StringBuilder();
+                boolean escaping = false;
+                // Ignore quotes
+                for (int i = 1; i < currentToken.length() - 1; i++) {
+                    char c = currentToken.charAt(i);
+                    if (escaping) {
+                        switch (c) {
+                            case 'n':
+                                val.append('\n');
+                                break;
+
+                            case 'r':
+                                val.append('\r');
+                                break;
+
+                            case 't':
+                                val.append('\t');
+                                break;
+
+                            default:
+                                val.append(c);
+                        }
+                        escaping = false;
+                    } else {
+                        if (c == '\\') {
+                            escaping = true;
+                        } else {
+                            val.append(c);
+                        }
+                    }
                 }
-                escaping = false;
-            } else {
-                if (c == '\\') {
-                    escaping = true;
+
+                return val.toString();
+            }
+        },
+
+        NUMBER_READER {
+            @Override
+            Object readObj(String currentToken, Iterator<String> tokenIterator, boolean inBackQuote) {
+                return new BigDecimal(currentToken);
+            }
+        },
+
+        SYMBOL_READER {
+            @Override
+            Object readObj(String currentToken, Iterator<String> tokenIterator, boolean inBackQuote) {
+                if (currentToken.equals("nil") || currentToken.equals("null")) {
+                    return null;
                 } else {
-                    val.append(c);
+                    Symbol symbol = Symbol.intern(currentToken);
+                    return inBackQuote ? new Cons(QUOTE, new Cons(symbol, null)) : symbol;
                 }
             }
-        }
+        },
 
-        return val.toString();
+        SEXP_READER {
+            @Override
+            Object readObj(String currentToken, Iterator<String> tokenIterator, boolean inBackQuote) {
+                List<Object> objs = new ArrayList<>();
+                if (inBackQuote) {
+                    objs.add(CONCAT);
+                }
+                while (tokenIterator.hasNext()) {
+                    currentToken = tokenIterator.next();
+                    if (")".equals(currentToken)) {
+                        return Cons.fromList(objs);
+                    } else {
+                        objs.add(read(currentToken, tokenIterator, inBackQuote));
+                    }
+                }
+                throw new IllegalArgumentException("Unmatched parentheses: need ) to match");
+            }
+        },
+
+        BACKQUOTE_READER {
+            @Override
+            Object readObj(String currentToken, Iterator<String> tokenIterator, boolean inBackQuote) {
+                currentToken = tokenIterator.next();
+                return read(currentToken, tokenIterator, true);
+            }
+        },
+
+        UNQUOTE_READER {
+            @Override
+            Object readObj(String currentToken, Iterator<String> tokenIterator, boolean inBackQuote) {
+                if (!tokenIterator.hasNext()) {
+                    throw new IllegalArgumentException("No argument found for unquote");
+                }
+                String nextToken = tokenIterator.next();
+                Object obj = read(nextToken, tokenIterator, false);
+                if (currentToken.contains("@")) {
+                    return obj;
+                } else {
+                    return new Cons(LIST, new Cons(obj, null));
+                }
+            }
+        },
+
+        QUOTE_READER {
+            @Override
+            Object readObj(String currentToken, Iterator<String> tokenIterator, boolean inBackQuote) {
+                if (!tokenIterator.hasNext()) {
+                    throw new IllegalArgumentException("No argument found for quote");
+                }
+                return new Cons(QUOTE, new Cons(read(tokenIterator.next(), tokenIterator, inBackQuote), null));
+            }
+        };
+
+        abstract Object readObj(String currentToken, Iterator<String> tokenIterator, boolean inBackQuote);
     }
+
 
 }
