@@ -44,7 +44,7 @@ public class Env {
         } else if (parent != null) {
             return parent.get(name);
         }
-        throw new IllegalStateException("Symbol " + name + " not found");
+        throw new IllegalStateException("No value bound to symbol " + name);
     }
 
 }
