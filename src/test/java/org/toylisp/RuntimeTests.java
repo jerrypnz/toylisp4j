@@ -70,7 +70,7 @@ public class RuntimeTests {
         Symbol lambda = Symbol.intern("lambda");
         Symbol arg = Symbol.intern("arg");
 
-        Env env = Runtime.createRootEnv();
+        Env env = Runtime.getRootEnv();
         Cons progn = _(_(lambda,
                          _(arg),
                          arg),
@@ -89,7 +89,7 @@ public class RuntimeTests {
         Object expectedCar = data.car();
         Object expectedCdr = data.cdr();
 
-        Env env = Runtime.createRootEnv();
+        Env env = Runtime.getRootEnv();
 
         assertEquals(expectedCar, Runtime.eval(_(car, _(quote, data)), env));
         assertEquals(expectedCdr, Runtime.eval(_(cdr, _(quote, data)), env));
@@ -104,7 +104,7 @@ public class RuntimeTests {
         Symbol cdr = Symbol.intern("cdr");
         Symbol quote = Symbol.intern("quote");
 
-        Env env = Runtime.createRootEnv();
+        Env env = Runtime.getRootEnv();
         Cons code = _(_(lambda, _(arg),
                          _(car, _(cdr, arg))),
                        _(quote, _("foo", "bar")));
@@ -122,13 +122,13 @@ public class RuntimeTests {
         Symbol a = Symbol.intern("a");
         Symbol b = Symbol.intern("b");
 
-        Env env = Runtime.createRootEnv();
+        Env env = Runtime.getRootEnv();
 
         Cons condFunc = _(lambda, _(x),
                           _(cond,
-                            _(eq, x, _(quote, a)), "foo",
-                            _(eq, x, _(quote, b)), "bar",
-                            t, "oops"));
+                            _(_(eq, x, _(quote, a)), "foo"),
+                            _(_(eq, x, _(quote, b)), "bar"),
+                            _(t, "oops")));
         assertEquals("foo", Runtime.eval(_(condFunc, _(quote, a)), env));
         assertEquals("bar", Runtime.eval(_(condFunc, _(quote, b)), env));
         assertEquals("oops", Runtime.eval(_(condFunc, "nop"), env));
@@ -139,9 +139,9 @@ public class RuntimeTests {
     public void testCondWithNilValue() {
         Symbol cond = Symbol.intern("cond");
         Symbol t = Symbol.intern("t");
-        Env env = Runtime.createRootEnv();
+        Env env = Runtime.getRootEnv();
 
-        assertNull(Runtime.eval(_(cond, t, null), env));
+        assertNull(Runtime.eval(_(cond, _(t, null)), env));
     }
 
 }

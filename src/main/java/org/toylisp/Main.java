@@ -16,7 +16,7 @@ import java.util.List;
 public class Main {
 
     public static void runREPL() throws IOException {
-        Env rootEnv = Runtime.createRootEnv();
+        Env rootEnv = Runtime.getRootEnv();
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         for (; ; ) {
             System.out.print("toylisp> ");
@@ -25,7 +25,7 @@ public class Main {
             if (line == null) {
                 return;
             }
-            List<Object> forms = null;
+            List<Object> forms;
             try {
                 forms = Reader.read(line);
             } catch (Exception e) {
@@ -59,7 +59,7 @@ public class Main {
 
         List<Object> forms = Reader.read(code);
 
-        Env rootEnv = Runtime.createRootEnv();
+        Env rootEnv = Runtime.getRootEnv();
 
         for (Object form : forms) {
             Runtime.eval(form, rootEnv);

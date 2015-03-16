@@ -15,11 +15,12 @@ import java.util.Map;
  */
 public class Runtime {
 
-    static Symbol DO = Symbol.intern("do");
-    static Symbol COND = Symbol.intern("cond");
-    static Symbol LAMBDA = Symbol.intern("lambda");
-    static Symbol QUOTE = Symbol.intern("quote");
-    static Symbol DEF = Symbol.intern("def");
+    static final Symbol DO = Symbol.intern("do");
+    static final Symbol COND = Symbol.intern("cond");
+    static final Symbol LAMBDA = Symbol.intern("lambda");
+    static final Symbol QUOTE = Symbol.intern("quote");
+    static final Symbol DEF = Symbol.intern("def");
+    static final Symbol DEFMACRO = Symbol.intern("defmacro");
 
     public static Cons cons(Object car, Object cdr) {
         return new Cons(car, cdr);
@@ -29,27 +30,15 @@ public class Runtime {
         return obj != null && !obj.equals(Boolean.FALSE);
     }
 
-    public static Env createRootEnv() {
-        return Env.createRoot()
-                  .set(Symbol.intern("cons"), cons)
-                  .set(Symbol.intern("car"), car)
-                  .set(Symbol.intern("cdr"), cdr)
-                  .set(Symbol.intern("list"), list)
-                  .set(Symbol.intern("concat"), concat)
-                  .set(Symbol.intern("eq?"), eq)
-                  .set(Symbol.intern("prn"), prn)
-                  .set(Symbol.intern("+"), plus)
-                  .set(Symbol.intern("-"), minus)
-                  .set(Symbol.intern("*"), multiply)
-                  .set(Symbol.intern("/"), divide)
-                  .set(Symbol.intern("t"), Boolean.TRUE);
+    public static Env getRootEnv() {
+        return rootEnv;
     }
 
     private static void ensureArity(String name, int expected, Cons args) {
         int n = 0;
         while (args != null) {
             n++;
-            args = (Cons)args.cdr();
+            args = (Cons) args.cdr();
         }
         ensureArity(name, expected, n);
     }
@@ -72,20 +61,37 @@ public class Runtime {
                 (specialForm = SpecialForm.getSpecialForm((Symbol) operator)) != null) {
                 return specialForm.run(params, env);
             } else {
-                // function call
+                // function call or macro
                 IFunc func = (IFunc) eval(operator, env);
-                List<Object> args = new ArrayList<>();
-                while (params != null) {
-                    // eval arguments
-                    args.add(eval(params.car(), env));
-                    params = (Cons) params.cdr();
+                if (func instanceof IMacro) {
+                    return eval(macroExpand(func, params), env);
+                } else {
+                    return callFunc(func, params, env);
                 }
-                return func.invoke(args.toArray());
             }
         } else {
             // Everything else evaluates to itself.
             return form;
         }
+    }
+
+    private static Object callFunc(IFunc func, Cons params, Env env) {List<Object> args = new ArrayList<>();
+        while (params != null) {
+            // eval arguments
+            args.add(eval(params.car(), env));
+            params = (Cons) params.cdr();
+        }
+        return func.invoke(args.toArray());
+    }
+
+    private static Object macroExpand(IFunc macro, Cons params) {
+        List<Object> args = new ArrayList<>();
+        while (params != null) {
+            // eval arguments
+            args.add(params.car());
+            params = (Cons) params.cdr();
+        }
+        return macro.invoke(args.toArray());
     }
 
     // Basic functions
@@ -137,6 +143,21 @@ public class Runtime {
             return (args[0] instanceof Symbol) &&
                    (args[1] instanceof Symbol) &&
                    (args[0] == args[1]);
+        }
+    };
+
+    static final IFunc equal = new IFunc() {
+        @Override
+        public Object invoke(Object... args) {
+            ensureArity("eq", 2, args.length);
+            if (args[0] == null) {
+                if (args[1] == null) {
+                    return true;
+                }
+            } else {
+                return args[0].equals(args[1]);
+            }
+            return false;
         }
     };
 
@@ -208,20 +229,57 @@ public class Runtime {
         }
     };
 
+    static final IFunc macroexpand = new IFunc() {
+        @Override
+        public Object invoke(Object... args) {
+            ensureArity("eq", 1, args.length);
+            Object form = args[0];
+            if (!(form instanceof Cons)) {
+                return form;
+            }
+            Cons cons = (Cons) form;
+            Object operator = cons.car();
+            Cons params = (Cons) cons.cdr();
+            if (operator instanceof Symbol &&
+                (SpecialForm.getSpecialForm((Symbol) operator)) == null) {
+                IFunc func = (IFunc) eval(operator, getRootEnv());
+                if (func instanceof IMacro) {
+                    return macroExpand(func, params);
+                }
+            }
+            return form;
+        }
+    };
+
+    private static List<Symbol> getArgNames(Cons args) {
+        List<Symbol> argNames = new ArrayList<>();
+        while (args != null) {
+            argNames.add((Symbol) args.car());
+            args = (Cons) args.cdr();
+        }
+        return argNames;
+    }
+
     // Special Forms
     enum SpecialForm {
 
         _cond(COND) {
             @Override
             Object run(Cons args, Env env) {
-                List<Object> forms = args.toList();
-                if (forms.size() == 0 || forms.size() % 2 != 0) {
-                    throw new IllegalArgumentException("cond: invalid args(need even number of args)");
+                if (args == null) {
+                    throw new IllegalStateException("cond: no clause found");
                 }
-                for (int i = 0; i < forms.size(); i += 2) {
-                    if (bool(eval(forms.get(i), env))) {
-                        return eval(forms.get(i + 1), env);
+                while (args != null) {
+                    Cons clause = (Cons) args.car();
+                    Object pred = clause.car();
+                    Cons expr = (Cons) clause.cdr();
+                    if (clause == null || pred == null || expr == null || expr.cdr() != null) {
+                        throw new IllegalArgumentException("cond: invalid clause");
                     }
+                    if (bool(eval(pred, env))) {
+                        return eval(expr.car(), env);
+                    }
+                    args = (Cons) args.cdr();
                 }
                 return null;
             }
@@ -231,15 +289,12 @@ public class Runtime {
             @Override
             Object run(Cons args, Env env) {
                 ensureArity("def", 2, args);
-                Env curEnv = env;
-                while (env.pop() != null) {
-                    env = env.pop();
-                }
+
                 Symbol name = (Symbol) args.car();
                 Object form = ((Cons) args.cdr()).car();
 
-                Object obj = eval(form, curEnv);
-                env.set(name, obj);
+                Object obj = eval(form, env);
+                getRootEnv().set(name, obj);
                 return obj;
             }
         },
@@ -257,14 +312,22 @@ public class Runtime {
         _lambda(LAMBDA) {
             @Override
             Object run(Cons definition, Env env) {
-                Cons args = (Cons) definition.car();
+                List<Symbol> argNames = getArgNames((Cons) definition.car());
                 Cons body = cons(DO, definition.cdr());
-                List<Symbol> argNames = new ArrayList<>();
-                while (args != null) {
-                    argNames.add((Symbol) args.car());
-                    args = (Cons) args.cdr();
-                }
                 return new Func(Collections.unmodifiableList(argNames), body, env);
+            }
+        },
+
+        _defmacro(DEFMACRO) {
+            @Override
+            Object run(Cons definition, Env env) {
+                Symbol name = (Symbol) definition.car();
+                Cons argsBody = (Cons) definition.cdr();
+                List<Symbol> argNames = getArgNames((Cons) argsBody.car());
+                Cons body = cons(DO, argsBody.cdr());
+                Macro macro = new Macro(Collections.unmodifiableList(argNames), body, env);
+                getRootEnv().set(name, macro);
+                return macro;
             }
         },
 
@@ -298,5 +361,21 @@ public class Runtime {
             return specialForms.get(operator);
         }
     }
+
+    static final Env rootEnv = Env.createRoot()
+                                  .set(Symbol.intern("cons"), cons)
+                                  .set(Symbol.intern("car"), car)
+                                  .set(Symbol.intern("cdr"), cdr)
+                                  .set(Symbol.intern("list"), list)
+                                  .set(Symbol.intern("concat"), concat)
+                                  .set(Symbol.intern("eq?"), eq)
+                                  .set(Symbol.intern("="), equal)
+                                  .set(Symbol.intern("prn"), prn)
+                                  .set(Symbol.intern("+"), plus)
+                                  .set(Symbol.intern("-"), minus)
+                                  .set(Symbol.intern("*"), multiply)
+                                  .set(Symbol.intern("/"), divide)
+                                  .set(Symbol.intern("macroexpand"), macroexpand)
+                                  .set(Symbol.intern("t"), Boolean.TRUE);
 
 }
