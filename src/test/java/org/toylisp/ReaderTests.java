@@ -114,7 +114,14 @@ public class ReaderTests {
         Symbol a = Symbol.intern("a");
         Symbol b = Symbol.intern("b");
         Symbol c = Symbol.intern("c");
-        assertEquals(_(concat, _(quote, a), _(list, b), c), Reader.read("`(a ,b ,@c)").get(0));
+        Symbol e = Symbol.intern("e");
+        Symbol f = Symbol.intern("f");
+        assertEquals(_(concat, _(list, _(quote, a)), _(list, b), c), Reader.read("`(a ,b ,@c)").get(0));
+        assertEquals(_(concat,
+                       _(list, _(quote, e)),
+                       _(list, _(quote, f)),
+                       _(list, _(concat, _(list, _(quote, a)), _(list, b), c))),
+                     Reader.read("`(e f (a ,b ,@c))").get(0));
     }
 
 }

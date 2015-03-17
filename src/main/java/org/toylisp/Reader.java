@@ -138,6 +138,12 @@ public class Reader {
         readers = Collections.unmodifiableMap(readersMap);
     }
 
+    // A special container that marks objects that need to be flattened (,@ inside backquote)
+    static final class NeedFlatten {
+        final Object coll;
+        NeedFlatten(Object coll) {this.coll = coll;}
+    }
+
     static enum ObjectReader {
 
         STRING_READER {
@@ -210,7 +216,15 @@ public class Reader {
                     if (")".equals(currentToken)) {
                         return Cons.fromList(objs);
                     } else {
-                        objs.add(read(currentToken, tokenIterator, inBackQuote));
+                        Object obj = read(currentToken, tokenIterator, inBackQuote);
+                        if (inBackQuote) {
+                            if (obj instanceof NeedFlatten) {
+                                obj = ((NeedFlatten) obj).coll;
+                            } else {
+                                obj = new Cons(LIST, new Cons(obj, null));
+                            }
+                        }
+                        objs.add(obj);
                     }
                 }
                 throw new IllegalArgumentException("Unmatched parentheses: need ) to match");
@@ -234,9 +248,9 @@ public class Reader {
                 String nextToken = tokenIterator.next();
                 Object obj = read(nextToken, tokenIterator, false);
                 if (currentToken.contains("@")) {
-                    return obj;
+                    return new NeedFlatten(obj);
                 } else {
-                    return new Cons(LIST, new Cons(obj, null));
+                    return obj;
                 }
             }
         },
