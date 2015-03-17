@@ -32,13 +32,10 @@ java -cp build/libs/toylisp-0.1.0-SNAPSHOT.jar org.toylisp.Main
 Example REPL session:
 
 ```lisp
-toylisp> (def map (lambda (f x) (cond x (cons (f (car x)) (map f (cdr x))) t nil)))
-org.toylisp.Func@7451b0af
-toylisp> (def double (lambda (n) (* n 2)))
+toylisp> (defun double (n) (* n 2))
 org.toylisp.Func@33a17727
 toylisp> (map double '(0 1 2 3 4 5 6))
 (0 2 4 6 8 10 12)
-toylisp>
 ```
 
 ## Data Types
@@ -54,10 +51,13 @@ Currently only the following operators are supported:
 
 - Special forms:
     - `def` Define a global variable
+    - `defun` Define a function
+    - `let` local binding
     - `lambda` Define a function
     - `do` Execute forms in sequence and return the value of the last expression
-    - `cond` Conditional expression. Note that only one level of parentheses is needed, like in Clojure.
+    - `cond` Conditional expression.
     - `quote`
+    - `if`
 - Functions: `cons`, `car`, `cdr`, `+`, `-`, `*`, `/`, `eq?`
 
 
@@ -65,10 +65,9 @@ Currently only the following operators are supported:
 
 Here is a list of features I'm planning to implement:
 
-- macros
 - core library written in toylisp itself, including but not limited to the following operations:
-    - `let`, `if`, `when`, `when-let`, `if-let`, `->`, `->>` (implemented with macros)
-    - `map`, `mapc`, `mapcat`, `cat` and other list manipulation functions
+    - `when`, `when-let`, `if-let`, `->`, `->>` (implemented with macros)
+    - `mapc`, `mapcat`, `cat` and other list manipulation functions
 - a metacircular interpreter implemented with toylisp itself
 
 ## License
