@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.List;
@@ -47,27 +48,48 @@ public class Main {
     }
 
     public static void runFile(String fileName, String encoding) throws IOException {
-        ByteArrayOutputStream codeBuf = new ByteArrayOutputStream(4096);
-        FileInputStream input = new FileInputStream(fileName);
+        String code;
+        try (FileInputStream input = new FileInputStream(fileName)) {
+            code = readCode(input, encoding);
+        }
+        runCode(code);
+    }
+
+    private static void runCode(String code) {
+        List<Object> forms = Reader.read(code);
+        for (Object form : forms) {
+            Runtime.eval(form, Runtime.getRootEnv());
+        }
+    }
+
+    private static String readCode(InputStream input, String encoding) throws IOException {ByteArrayOutputStream codeBuf = new ByteArrayOutputStream(4096);
         byte[] buf = new byte[2048];
         int len;
         while ((len = input.read(buf)) > 0) {
             codeBuf.write(buf, 0, len);
         }
 
-        String code = codeBuf.toString(encoding);
+        return codeBuf.toString(encoding);
+    }
 
-        List<Object> forms = Reader.read(code);
-
-        Env rootEnv = Runtime.getRootEnv();
-
-        for (Object form : forms) {
-            Runtime.eval(form, rootEnv);
+    private static void loadLib(String classpath) throws IOException {
+        InputStream ins = Main.class.getClassLoader().getResourceAsStream(classpath);
+        if (ins == null) {
+            throw new IllegalStateException("Unable to load library from classpath: " + classpath);
         }
 
+        String code;
+        try {
+            code = readCode(ins, "UTF-8");
+        } finally {
+            ins.close();
+        }
+        runCode(code);
     }
 
     public static void main(String[] args) throws IOException {
+        loadLib("core.lisp");
+
         if (args.length == 0) {
             runREPL();
         } else {

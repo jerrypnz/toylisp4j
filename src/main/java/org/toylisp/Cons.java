@@ -30,11 +30,7 @@ public class Cons {
         Cons tail = null;
         for (int i = args.length - 1; i >= 0; i--) {
             Object obj = args[i];
-            if (obj instanceof Cons) {
-                tail = concat((Cons) obj, tail);
-            } else {
-                tail = new Cons(obj, tail);
-            }
+            tail = concat((Cons) obj, tail);
         }
         return tail;
     }
