@@ -107,6 +107,9 @@ public class Runtime {
         @Override
         public Object invoke(Object... args) {
             ensureArity("car", 1, args.length);
+            if (args[0] == null) {
+                return null;
+            }
             return ((Cons) args[0]).car();
         }
     };
@@ -115,6 +118,9 @@ public class Runtime {
         @Override
         public Object invoke(Object... args) {
             ensureArity("cdr", 1, args.length);
+            if (args[0] == null) {
+                return null;
+            }
             return ((Cons) args[0]).cdr();
         }
     };
