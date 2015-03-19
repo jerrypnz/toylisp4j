@@ -28,13 +28,7 @@ public class Env {
     }
 
     public Env set(Symbol name, Object val) {
-        if (bindings.containsKey(name)) {
-            bindings.put(name, val);
-        } else if (parent != null) {
-            parent.set(name, val);
-        } else {
-            bindings.put(name, val);
-        }
+        bindings.put(name, val);
         return this;
     }
 
